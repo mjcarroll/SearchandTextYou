@@ -33,16 +33,32 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class MainActivity extends AppCompatActivity implements PointOfInterestClickInterface {
+public class MainActivity extends AppCompatActivity implements PointOfInterestClickInterface, GoogleApiClient.ConnectionCallbacks{
     private FrameLayout container;
     private SensorMixer mixer;
     private SurfaceView surfaceView;
     private Overlay overlay;
     private CameraOp disp;
+
+    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
+    public static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
+            UPDATE_INTERVAL_IN_MILLISECONDS / 2;
+
+    protected GoogleApiClient mGoogleApiClient;
+    private LocationRequest mLocationRequest;
+    protected LocationSettingsRequest mLocationSettingsRequest;
+
 
     int ID = 0;
 
@@ -71,16 +87,30 @@ public class MainActivity extends AppCompatActivity implements PointOfInterestCl
         }
     };
 
+    int RQS_GooglePlayServices=0;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        GoogleApiAvailability googleAPI = GoogleApiAvailability.getInstance();
+        int resultCode = googleAPI.isGooglePlayServicesAvailable(this);
+        if (resultCode == ConnectionResult.SUCCESS) {
+            mGoogleApiClient.connect();
+        } else {
+            googleAPI.getErrorDialog(this,resultCode, RQS_GooglePlayServices);
+        }
+    }
 
     public void onClick(PointOfInterest point) {
         Log.i("MainActivity", "onClick");
 
         DetailFragment newFragment = new DetailFragment();
+        newFragment.setPOI(point);
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(R.id.container, newFragment);
         transaction.addToBackStack(null);
         transaction.commit();
-        newFragment.setPOI(point);
     }
 
     @Override
@@ -115,42 +145,21 @@ public class MainActivity extends AppCompatActivity implements PointOfInterestCl
         surfaceView = (SurfaceView) findViewById(R.id.surface_view);
         surfaceView.setKeepScreenOn(true);
 
-        Location cur = null;
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            mixer.locationManager = (LocationManager) this.getSystemService(LOCATION_SERVICE);
-            mixer.locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                    5000, 0, mixer);
-            cur = mixer.locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
-        }
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(LocationServices.API)
+                .addConnectionCallbacks(this)
+                .build();
 
         final double curLat;
         final double curLon;
         final double curAlt;
 
-        if (cur != null) {
-            curLat = cur.getLatitude() * DEG2RAD;
-            curLon = cur.getLongitude() * DEG2RAD;
-            curAlt = cur.getAltitude();
-        } else {
-            curLat = 34.74122 * DEG2RAD;
-            curLon = -86.58194 * DEG2RAD;
-            curAlt = 210;
-        }
+        curLat = 34.747020 * DEG2RAD;
+        curLon = -86.581826 * DEG2RAD;
+        curAlt = 210;
 
-        points = new ArrayList<PointOfInterest>() {{
-            /*
-            add(new PointOfInterest(0, new GeoPoint(curLat + 1e-5,curLon, curAlt), "north"));
-            add(new PointOfInterest(1, new GeoPoint(curLat - 1e-5,curLon, curAlt), "south"));
-            add(new PointOfInterest(2, new GeoPoint(curLat,curLon+1e-5, curAlt), "east"));
-            add(new PointOfInterest(3, new GeoPoint(curLat,curLon-1e-5, curAlt), "west"));
-            add(new PointOfInterest(4, new GeoPoint(curLat,curLon, curAlt+10), "up"));
-            add(new PointOfInterest(5, new GeoPoint(curLat,curLon, curAlt-10), "down"));*/
-
-            //add(new PointOfInterest(new GeoPoint(
-            //        34.749184 * DEG2RAD, -86.583051 * DEG2RAD, 105.0), "test"));
-        }};
-
+        points = new ArrayList<PointOfInterest>();
         overlay = new Overlay(this.getApplicationContext());
         overlay.setRenderPoints(points);
         overlay.setCallback(this);
@@ -158,18 +167,7 @@ public class MainActivity extends AppCompatActivity implements PointOfInterestCl
 
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
         {
-            mixer.locationManager = (LocationManager) this.getSystemService(LOCATION_SERVICE);
             mixer.sensorManager = (SensorManager) this.getSystemService(SENSOR_SERVICE);
-
-            Log.i("MainActivity", "Requesting location");
-            mixer.locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                    1000, 0, mixer);
-            mixer.locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
-                    1000, 0, mixer);
-            if(cur != null) {
-                overlay.onLocation(new double[]{cur.getLatitude() * DEG2RAD, cur.getLongitude() * DEG2RAD, cur.getAltitude()});
-            }
-
             mixer.sensorManager.registerListener(mixer,
                     mixer.sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),
                     SensorManager.SENSOR_DELAY_FASTEST);
@@ -208,18 +206,83 @@ public class MainActivity extends AppCompatActivity implements PointOfInterestCl
         });
     }
 
+    @Override
+    public void onConnectionSuspended(int v) {
+
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+
+        Log.i("MainWindows", "Connected to GoogleApiClient");
+        Toast.makeText(this, "ApiClient", Toast.LENGTH_SHORT).show();
+
+
+        // If the initial location was never previously requested, we use
+        // FusedLocationApi.getLastLocation() to get it. If it was previously requested, we store
+        // its value in the Bundle and check for it in onCreate(). We
+        // do not request it again unless the user specifically requests location updates by pressing
+        // the Start Updates button.
+        //
+        // Because we cache the value of the initial location in the Bundle, it means that if the
+        // user launches the activity,
+        // moves to a new location, and then changes the device orientation, the original location
+        // is displayed as the activity is re-created.
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            mLocationRequest = new LocationRequest();
+            mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
+            mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
+            mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+            mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+            builder.addLocationRequest(mLocationRequest);
+            mLocationSettingsRequest = builder.build();
+
+            /*
+            LocationServices.FusedLocationApi.requestLocationUpdates(
+                    mGoogleApiClient,
+                    mLocationRequest,
+                    mixer);
+            Location cur = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+
+            float curLat = (float) (cur.getLatitude() * DEG2RAD);
+            float curLon = (float) (cur.getLongitude() * DEG2RAD);
+            float curAlt = (float) cur.getAltitude();
+            */
+            float curLat = (float)(34.747020 * DEG2RAD);
+            float curLon = (float)(-86.581826 * DEG2RAD);
+            float curAlt = 210;
+            overlay.setCurrentLocation(new GeoPoint(curLat, curLon, curAlt));
+
+
+            overlay.mRenderPoints.add(new PointOfInterest(0, new GeoPoint(curLat + 1e-6, curLon, -1), "north"));
+            overlay.mRenderPoints.add(new PointOfInterest(0, new GeoPoint(curLat - 1e-6, curLon, -1), "south"));
+            overlay.mRenderPoints.add(new PointOfInterest(0, new GeoPoint(curLat, curLon+1e-6, -1), "west"));
+            overlay.mRenderPoints.add(new PointOfInterest(0, new GeoPoint(curLat, curLon-1e-6, -1), "east"));
+        }
+    }
+
     private void sendSMS(String status) {
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             float lat = (float) (this.overlay.mCurLoc.mLat / DEG2RAD);
             float lon = (float) (this.overlay.mCurLoc.mLon / DEG2RAD);
-            Location cur = mixer.locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
             String payload = Integer.toString(ID) + ";" + Double.toString(lat) + ";" + Double.toString(lon) + ";" + status;
             ID = ID + 1;
             Log.i("MainActivity", payload);
 
             SmsManager sms = SmsManager.getDefault();
-            sms.sendTextMessage("12566661447", null, payload, null, null);
+            Log.i("MainActivity", this.overlay.mCurLoc.toString());
+
+            if(false) {
+                PointOfInterest p = new PointOfInterest(ID, new GeoPoint(this.overlay.mCurLoc.mLat, this.overlay.mCurLoc.mLon, -1), status);
+                this.overlay.mRenderPoints.add(p);
+            } else {
+                sms.sendTextMessage("12566661447", null, payload, null, null);
+                Toast.makeText(this, "Sent SMS", Toast.LENGTH_SHORT).show();
+            }
+
         }
     }
 
@@ -232,6 +295,10 @@ public class MainActivity extends AppCompatActivity implements PointOfInterestCl
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (permissions.length < 1) {
+            return;
+        }
+
         if (this.checkSelfPermission(permissions[0]) == PackageManager.PERMISSION_GRANTED) {
             if (requestCode == LOCATION) {
                 Toast.makeText(this, "Location Permission granted", Toast.LENGTH_SHORT).show();
@@ -244,5 +311,4 @@ public class MainActivity extends AppCompatActivity implements PointOfInterestCl
             }
         }
     }
-
 }

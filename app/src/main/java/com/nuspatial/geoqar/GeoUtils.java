@@ -119,6 +119,7 @@ eX, eY, eZ = point of interest, possibly converted from LLA;   eXR, eYR, eZR = r
         double e = r10 * ecef[0] + r11 * ecef[1] + r12 * ecef[2];
         double d = r20 * ecef[0] + r21 * ecef[1] + r22 * ecef[2];
 
+
         return new double[] {n, e, d};
     }
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="conditions_array">
+        <item>Green</item>
+        <item>Yellow</item>
+        <item>Red</item>
+        <item>Black</item>
+    </string-array>
+
+</resources>

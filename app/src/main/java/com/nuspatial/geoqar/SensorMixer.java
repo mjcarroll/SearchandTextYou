@@ -5,10 +5,11 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+
+import com.google.android.gms.location.LocationListener;
 
 /**
  * Created by michael on 2/25/17.
@@ -60,21 +61,6 @@ public class SensorMixer implements SensorEventListener, LocationListener {
                                                location.getLongitude() * DEG2RAD,
                     location.getAltitude()});
         }
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-        Log.i(TAG, "onProviderDisabled");
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-        Log.i(TAG, "onProviderEnabled");
-    }
-
-    @Override
-    public void onStatusChanged(String s, int i, Bundle bundle) {
-        Log.i(TAG, "onStatusChanged");
     }
 
     public LocationManager locationManager;

@@ -24,7 +24,7 @@ import java.lang.Math;
 public class Overlay extends View implements SensorMixerCallback {
 
     private Context mContext;
-    private List<PointOfInterest> mRenderPoints;
+    public List<PointOfInterest> mRenderPoints;
 
     class PointXY {
         float x;
@@ -124,6 +124,29 @@ public class Overlay extends View implements SensorMixerCallback {
         this.invalidate();
     }
 
+    public float[] drawPoint(double[] ned) {
+        float[] pt_c = new float[4];
+        float[] ned2 = new float[]{(float) ned[0], (float) ned[1], (float) ned[2], 1.0f};
+        Matrix.multiplyMV(pt_c, 0, view_matrix, 0, ned2, 0);
+        float x_p = pt_c[0]/pt_c[2];
+        float y_p = pt_c[1]/pt_c[2];
+        float v = proj_matrix[0] * x_p + proj_matrix[2];
+        float u = proj_matrix[5] * y_p + proj_matrix[6];
+        return new float[] {u, v};
+    }
+
+    public float[] drawPoint(double n, double e, double d) {
+        float[] pt_c = new float[4];
+        float[] ned2 = new float[]{(float) n, (float) e, (float) d, 1.0f};
+        Matrix.multiplyMV(pt_c, 0, view_matrix, 0, ned2, 0);
+        float x_p = pt_c[0]/pt_c[2];
+        float y_p = pt_c[1]/pt_c[2];
+        float v = proj_matrix[0] * x_p + proj_matrix[2];
+        float u = proj_matrix[5] * y_p + proj_matrix[6];
+        return new float[] {u, v};
+    }
+
+
     @Override
     public void onDraw(Canvas canvas) {
 
@@ -147,6 +170,7 @@ public class Overlay extends View implements SensorMixerCallback {
 
         Paint paint = new Paint();
         paint.setColor(Color.WHITE);
+        paint.setStrokeWidth((float)5.0);
         paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
         paint.setTextSize(40);
 
@@ -154,39 +178,37 @@ public class Overlay extends View implements SensorMixerCallback {
 
         for(int i = 0; i < mRenderPoints.size(); ++i) {
             double[] ned;
-            /*
+
             Log.i("Overlay",
                     Double.toString(mCurLoc.mLat) + " " + Double.toString(mCurLoc.mLon) + " " + Double.toString(mCurLoc.mAlt));
-                    */
+
 
             if(mRenderPoints.get(i).mPoint.mAlt < 0) {
                 GeoPoint pt = new GeoPoint ( mRenderPoints.get(i).mPoint.mLat,
                                              mRenderPoints.get(i).mPoint.mLon,
-                                              mCurLoc.mAlt);
+                                              mCurLoc.mAlt + 1.0);
 
-                /*
+
                 Log.i("Overlay",
                         "no alt: " +
-                        Double.toString(pt.mLat) + " " + Double.toString(pt.mLon) + " " + Double.toString(pt.mAlt)); */
+                        Double.toString(pt.mLat) + " " + Double.toString(pt.mLon) + " " + Double.toString(pt.mAlt));
                 ned = pt.toNED(mCurLoc);
             } else {
                 GeoPoint pt = mRenderPoints.get(i).mPoint;
-                /* Log.i("Overlay",
-                        "with alt: " + Double.toString(pt.mLat) + " " + Double.toString(pt.mLon) + " " + Double.toString(pt.mAlt)); */
+                 Log.i("Overlay",
+                        "with alt: " + Double.toString(pt.mLat) + " " + Double.toString(pt.mLon) + " " + Double.toString(pt.mAlt));
                 ned = mRenderPoints.get(i).mPoint.toNED(mCurLoc);
             }
+
+            double[] ned3 = new double[] { ned[1], -ned[0], ned[2] };
+
+            ned = ned3;
 
             /*
             Log.i("Overlay", "NED: " + Double.toString(ned[0]) + " " +
                     Double.toString(ned[1]) + " " +
                     Double.toString(ned[2]));
-                    */
-
-            float[] ned1 = new float[] {(float)ned[0], (float)ned[1], (float)ned[2], 1.0f};
-            float[] pt_c = new float[4];
-
-            Matrix.multiplyMV(pt_c, 0, view_matrix, 0, ned1, 0);
-            double dist = Math.sqrt( (double)(pt_c[0] * pt_c[0] + pt_c[1] * pt_c[1] + pt_c[2] * pt_c[2]));
+                    *
 
             /*
             Log.i("Overlay", Float.toString(pt_c[0]) + " " +
@@ -195,42 +217,79 @@ public class Overlay extends View implements SensorMixerCallback {
                              Float.toString(pt_c[3]));
                              */
 
-            float x_p = pt_c[0]/pt_c[2];
-            float y_p = pt_c[1]/pt_c[2];
 
-            float[] drawCoords(float x, float y){
+            float[] pt_c = new float[4];
+            float[] ned2 = new float[]{(float) ned[0], (float) ned[1], (float) ned[2], 1.0f};
+            Log.i("Render", String.format("%3.4f %3.4f %3.4f", ned[0], ned[1], ned[2]));
 
-            }
-
+            Matrix.multiplyMV(pt_c, 0, view_matrix, 0, ned2, 0);
+            /*
+            n e s w
+            e s w n
+            w = n
+*/
             // Only render stuff that's in front of the camera
             if(pt_c[2] > 0) {
-
-
-
-                //Log.i("Overlay", "x_p: " + Float.toString(x_p) + "   y_p: " + Float.toString(y_p));
-
-                float v = proj_matrix[0] * x_p + proj_matrix[2];
-                float u = proj_matrix[5] * y_p + proj_matrix[6];
-                float draw_x =  (u / 1920.0f) * canvas.getWidth();
-                float draw_y =  (v / 1080.0f) * canvas.getHeight();
-
-                mDrawnPoints.add(new PointXY(draw_x, draw_y));
-                //Log.i("Overlay", "u: " + Float.toString(u) + "   v: " + Float.toString(v));
-                //Log.i("Overlay", "uu: " + Float.toString((u / 1920.0f) * canvas.getHeight()) + " " +
-                //        "vv: " + Float.toString((v / 1080.0f) * canvas.getWidth()));
-
+                Log.i("Render", "Rendering " + Integer.toString(i));
                 if (mRenderPoints.get(i).mStatus.equals("Black")) paint.setColor(Color.DKGRAY);
                 if (mRenderPoints.get(i).mStatus.equals("Red")) paint.setColor(Color.RED);
                 if (mRenderPoints.get(i).mStatus.equals("Yellow")) paint.setColor(Color.YELLOW);
                 if (mRenderPoints.get(i).mStatus.equals("Green")) paint.setColor(Color.GREEN);
 
-                if (dist > 150.0) dist = 150.0;
+                {
+                    //Log.i("Overlay", "x_p: " + Float.toString(x_p) + "   y_p: " + Float.toString(y_p));
+                    float[] uv = drawPoint(ned);
 
-                int size = (int)Math.floor((150.0 - dist)/2.0);
+                    float draw_x = (uv[0] / 1920.0f) * canvas.getWidth();
+                    float draw_y = (uv[1] / 1080.0f) * canvas.getHeight();
+                    double dist = Math.sqrt(ned[0] * ned[0] + ned[1] * ned[1] + ned[2] * ned[2]);
+                    mDrawnPoints.add(new PointXY(draw_x, draw_y));
+                    canvas.drawText(mRenderPoints.get(i).mStatus, draw_x + 100, draw_y, paint);
+                    canvas.drawText(String.format("%3.0f m", dist), draw_x + 100, draw_y+50, paint);
+                }
 
-                canvas.drawRect(draw_x - size, draw_y - size, draw_x + size, draw_y + size, paint);
-                canvas.drawText(mRenderPoints.get(i).mStatus, draw_x + 100, draw_y, paint);
-                canvas.drawText(String.format("%3.0f m", dist), draw_x + 100, draw_y+50, paint);
+                {
+                    float[] uv1 = drawPoint(ned[0] + 1, ned[1], ned[2]);
+                    float draw_x1 = (uv1[0] / 1920.0f) * canvas.getWidth();
+                    float draw_y1 = (uv1[1] / 1080.0f) * canvas.getHeight();
+                    float[] uv2 = drawPoint(ned[0] - 1, ned[1], ned[2]);
+                    float draw_x2 = (uv2[0] / 1920.0f) * canvas.getWidth();
+                    float draw_y2 = (uv2[1] / 1080.0f) * canvas.getHeight();
+
+                    if (uv1[0] > 0.0 && uv2[0] > 0.0 && uv1[1] > 0.0 && uv1[1] > 0.0) {
+                        //Log.i("Render", String.format("%3.0f %3.0f %3.0f %3.0f", draw_x1, draw_y1, draw_x2, draw_y2));
+                        canvas.drawLine(draw_x1, draw_y1, draw_x2, draw_y2, paint);
+                    }
+                }
+
+                {
+                    float[] uv1 = drawPoint(ned[0], ned[1] + 1, ned[2]);
+                    float draw_x1 = (uv1[0] / 1920.0f) * canvas.getWidth();
+                    float draw_y1 = (uv1[1] / 1080.0f) * canvas.getHeight();
+                    float[] uv2 = drawPoint(ned[0], ned[1] - 1, ned[2]);
+                    float draw_x2 = (uv2[0] / 1920.0f) * canvas.getWidth();
+                    float draw_y2 = (uv2[1] / 1080.0f) * canvas.getHeight();
+
+                    if (uv1[0] > 0.0 && uv2[0] > 0.0 && uv1[1] > 0.0 && uv1[1] > 0.0) {
+                        //Log.i("Render", String.format("%3.0f %3.0f %3.0f %3.0f", draw_x1, draw_y1, draw_x2, draw_y2));
+                        canvas.drawLine(draw_x1, draw_y1, draw_x2, draw_y2, paint);
+                    }
+                }
+
+                {
+                    float[] uv1 = drawPoint(ned[0], ned[1], ned[2] + 1);
+                    float draw_x1 = (uv1[0] / 1920.0f) * canvas.getWidth();
+                    float draw_y1 = (uv1[1] / 1080.0f) * canvas.getHeight();
+                    float[] uv2 = drawPoint(ned[0], ned[1], ned[2] - 1);
+                    float draw_x2 = (uv2[0] / 1920.0f) * canvas.getWidth();
+                    float draw_y2 = (uv2[1] / 1080.0f) * canvas.getHeight();
+
+                    if (uv1[0] > 0.0 && uv2[0] > 0.0 && uv1[1] > 0.0 && uv1[1] > 0.0) {
+                        //Log.i("Render", String.format("%3.0f %3.0f %3.0f %3.0f", draw_x1, draw_y1, draw_x2, draw_y2));
+                        canvas.drawLine(draw_x1, draw_y1, draw_x2, draw_y2, paint);
+                    }
+                }
+
 
             } else {
                 mDrawnPoints.add(new PointXY(1e8f,1e8f));

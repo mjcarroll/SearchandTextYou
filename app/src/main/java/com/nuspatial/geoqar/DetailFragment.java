@@ -13,6 +13,7 @@ import android.widget.TextView;
 
 public class DetailFragment extends Fragment {
 
+    private String mStr;
     public DetailFragment() {
 
     }
@@ -20,15 +21,16 @@ public class DetailFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v =  inflater.inflate(R.layout.detail_view, container, false);
+        TextView text = (TextView) v.findViewById(R.id.textView);
+        if(mStr != null)
+            text.setText(mStr);
         return v;
     }
 
     public void setPOI(PointOfInterest point) {
-        String str = new String();
-        str += "Trigage Found: " + point.mId + "\n";
-        str += "  Status: " + point.mStatus + "\n";
-        str += "  Point: " + point.mPoint.toString() + "\n";
-        TextView mText = (TextView) getView().findViewById(R.id.textView);
-        mText.setText(str);
+        mStr = new String();
+        mStr += "Trigage Found: " + point.mId + "\n";
+        mStr += "  Status: " + point.mStatus + "\n";
+        mStr += "  Point: " + point.mPoint.toString() + "\n";
     }
 }
