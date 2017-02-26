@@ -42,7 +42,7 @@ public class Overlay extends View implements SensorMixerCallback {
 
     private List<PointXY> mDrawnPoints;
 
-    private GeoPoint mCurLoc;
+    public GeoPoint mCurLoc;
 
     private float[] proj_matrix;
     private float[] inv_proj_matrix;
@@ -182,9 +182,7 @@ public class Overlay extends View implements SensorMixerCallback {
                     Double.toString(ned[2]));
                     */
 
-            float[] ned1 = new float[] {(float)ned[0],
-                    (float)ned[1], (float)ned[2], 1.0f};
-
+            float[] ned1 = new float[] {(float)ned[0], (float)ned[1], (float)ned[2], 1.0f};
             float[] pt_c = new float[4];
 
             Matrix.multiplyMV(pt_c, 0, view_matrix, 0, ned1, 0);
@@ -200,13 +198,19 @@ public class Overlay extends View implements SensorMixerCallback {
             float x_p = pt_c[0]/pt_c[2];
             float y_p = pt_c[1]/pt_c[2];
 
+            float[] drawCoords(float x, float y){
+
+            }
+
             // Only render stuff that's in front of the camera
             if(pt_c[2] > 0) {
+
+
+
                 //Log.i("Overlay", "x_p: " + Float.toString(x_p) + "   y_p: " + Float.toString(y_p));
 
                 float v = proj_matrix[0] * x_p + proj_matrix[2];
                 float u = proj_matrix[5] * y_p + proj_matrix[6];
-
                 float draw_x =  (u / 1920.0f) * canvas.getWidth();
                 float draw_y =  (v / 1080.0f) * canvas.getHeight();
 
@@ -215,8 +219,16 @@ public class Overlay extends View implements SensorMixerCallback {
                 //Log.i("Overlay", "uu: " + Float.toString((u / 1920.0f) * canvas.getHeight()) + " " +
                 //        "vv: " + Float.toString((v / 1080.0f) * canvas.getWidth()));
 
+                if (mRenderPoints.get(i).mStatus.equals("Black")) paint.setColor(Color.DKGRAY);
+                if (mRenderPoints.get(i).mStatus.equals("Red")) paint.setColor(Color.RED);
+                if (mRenderPoints.get(i).mStatus.equals("Yellow")) paint.setColor(Color.YELLOW);
+                if (mRenderPoints.get(i).mStatus.equals("Green")) paint.setColor(Color.GREEN);
 
-                canvas.drawRect(draw_x - 50, draw_y - 50, draw_x + 50, draw_y + 50, paint);
+                if (dist > 150.0) dist = 150.0;
+
+                int size = (int)Math.floor((150.0 - dist)/2.0);
+
+                canvas.drawRect(draw_x - size, draw_y - size, draw_x + size, draw_y + size, paint);
                 canvas.drawText(mRenderPoints.get(i).mStatus, draw_x + 100, draw_y, paint);
                 canvas.drawText(String.format("%3.0f m", dist), draw_x + 100, draw_y+50, paint);
 

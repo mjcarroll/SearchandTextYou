@@ -19,7 +19,6 @@
         android:layout_margin="16dp"
         android:clickable="true"
         app:layout_anchor="@id/container"
-        app:layout_anchorGravity="bottom|right|end"
         app:backgroundTint="#FF0000"
         app:rippleColor="#FFF" />
 

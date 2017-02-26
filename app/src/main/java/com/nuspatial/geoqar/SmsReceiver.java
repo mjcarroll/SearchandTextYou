@@ -8,10 +8,11 @@ import android.telephony.SmsMessage;
 import android.util.Log;
 
 /**
- * Created by michael on 2/25/17.
+ * Created by michael on 2/26/17.
  */
 
-public class SmsReceiver extends BroadcastReceiver {
+public class SmsReceiver   extends BroadcastReceiver
+{
     public static final String SMS_BUNDLE = "pdus";
     public static final String TAG = "SmsReceiver";
 
@@ -30,8 +31,24 @@ public class SmsReceiver extends BroadcastReceiver {
 
                 if( address.equals("+12566661447"))
                 {
-                    Log.d(TAG, "abortBroadcast");
-                    abortBroadcast();
+                    String[] fields = smsBody.split(";");
+
+                    int id = Integer.parseInt(fields[0]);
+                    float lat = Float.parseFloat(fields[1]);
+                    float lon = Float.parseFloat(fields[2]);
+                    String status = fields[3];
+
+                    PointOfInterest poi = new PointOfInterest(id, new GeoPoint(lat, lon, -1), status);
+
+                    Bundle extras = intent.getExtras();
+                    Intent ii = new Intent("POI");
+                    // Data you need to pass to activity
+                    ii.putExtra("id", id);
+                    ii.putExtra("lat", lat);
+                    ii.putExtra("lon", lon);
+                    ii.putExtra("status", status);
+                    context.sendBroadcast(ii);
+                    //points.add(poi);
                 }
             }
         }

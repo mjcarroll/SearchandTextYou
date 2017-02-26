@@ -7,8 +7,10 @@ package com.nuspatial.geoqar;
 public class PointOfInterest {
     public GeoPoint mPoint;
     public String mStatus;
+    public int mId;
 
-    public PointOfInterest(GeoPoint point, String status) {
+    public PointOfInterest(int id, GeoPoint point, String status) {
+        mId = id;
         mPoint = point;
         mStatus = status;
     }
