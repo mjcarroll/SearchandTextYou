@@ -239,7 +239,7 @@ public class MainActivity extends AppCompatActivity implements PointOfInterestCl
             builder.addLocationRequest(mLocationRequest);
             mLocationSettingsRequest = builder.build();
 
-            /*
+
             LocationServices.FusedLocationApi.requestLocationUpdates(
                     mGoogleApiClient,
                     mLocationRequest,
@@ -249,10 +249,12 @@ public class MainActivity extends AppCompatActivity implements PointOfInterestCl
             float curLat = (float) (cur.getLatitude() * DEG2RAD);
             float curLon = (float) (cur.getLongitude() * DEG2RAD);
             float curAlt = (float) cur.getAltitude();
-            */
+
+            /*
             float curLat = (float)(34.747020 * DEG2RAD);
             float curLon = (float)(-86.581826 * DEG2RAD);
             float curAlt = 210;
+            */
             overlay.setCurrentLocation(new GeoPoint(curLat, curLon, curAlt));
 
 
